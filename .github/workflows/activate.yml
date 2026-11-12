@@ -11,6 +11,7 @@ jobs:
         run: |
           mkdir -p out
           docker run --rm -e UNITY_EMAIL -e UNITY_PASSWORD -v $PWD/out:/out unityci/editor:ubuntu-6000.0.85f2-android-3 bash -c '
+            C=$(find / -name Unity.Licensing.Client -type f 2>/dev/null | head -1); echo CLIENT=$C; $C --help 2>&1 | head -80
             unity-editor -batchmode -nographics -quit -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" -logFile /out/log.txt || true
             find / -name "*.ulf" 2>/dev/null -exec cp {} /out/ \; ; ls /root/.local/share/unity3d/Unity 2>/dev/null; true'
           grep -iE "licens|entitle|error|token" out/log.txt | grep -viE "password" | head -60 || true
