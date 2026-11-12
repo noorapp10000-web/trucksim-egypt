@@ -1,0 +1,3 @@
+TruckSimHighway/Assets/Resources/Trucks/T3_VolvoFH460.glb
+TruckSimHighway/Assets/Resources/Trucks/T5_CatCT680.glb
+TruckSimHighway/Assets/Resources/Trucks/T6_ScaniaS730.glb
