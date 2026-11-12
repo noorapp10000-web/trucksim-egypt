@@ -42,6 +42,8 @@ jobs:
           targetPlatform: Android
           androidExportType: androidPackage
           buildName: TruckSimHighway
+          allowDirtyBuild: true
+          versioning: None
       - name: Find APK
         run: |
           APK=$(find build -name '*.apk' | head -1)
