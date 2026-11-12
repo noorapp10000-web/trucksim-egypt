@@ -8,15 +8,13 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          docker system prune -af || true
-          df -h
+          df -h /
       - uses: actions/checkout@v4
-        with:
-          lfs: true
       - name: Download large truck models
         env:
           GH_TOKEN: ${{ github.token }}
@@ -25,30 +23,27 @@ jobs:
             [ -z "$f" ] && continue
             gh release download big-assets -R ${{ github.repository }} -p "$(basename "$f")" -O "$f" --clobber
           done < big-assets.txt
-          ls -lh TruckSimHighway/Assets/Resources/Trucks
       - uses: actions/cache@v4
         with:
           path: TruckSimHighway/Library
           key: Library-Android-${{ hashFiles('TruckSimHighway/Assets/**', 'TruckSimHighway/Packages/**', 'TruckSimHighway/ProjectSettings/**') }}
           restore-keys: Library-Android-
-      - uses: game-ci/unity-builder@v4
+      - name: Activate Unity Personal and build APK
         env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        with:
-          projectPath: TruckSimHighway
-          unityVersion: 6000.0.85f2
-          targetPlatform: Android
-          androidExportType: androidPackage
-          buildName: TruckSimHighway
-          allowDirtyBuild: true
-          versioning: None
-      - name: Find APK
         run: |
-          APK=$(find build -name '*.apk' | head -1)
-          echo "Found $APK"
-          cp "$APK" TruckSimHighway.apk
+          docker run --rm -e UNITY_EMAIL -e UNITY_PASSWORD -v "$PWD/TruckSimHighway:/project" -w /project \
+            unityci/editor:ubuntu-6000.0.85f2-android-3 bash -c '
+            set -e
+            C=$(find /opt/unity -name Unity.Licensing.Client -type f | head -1)
+            $C --activate-all --include-personal --username "$UNITY_EMAIL" --password "$UNITY_PASSWORD" | tail -5
+            unity-editor -batchmode -nographics -quit -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" \
+              -projectPath /project -buildTarget Android \
+              -executeMethod TruckSim.EditorTools.ProjectBuilder.BuildAndroid -logFile - ; code=$?
+            exit $code'
+          ls -lh TruckSimHighway/Builds/Android
+          sudo cp TruckSimHighway/Builds/Android/HighwayTruckSim.apk TruckSimHighway.apk
       - uses: actions/upload-artifact@v4
         with:
           name: TruckSimHighway-apk
